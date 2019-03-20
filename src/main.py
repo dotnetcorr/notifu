@@ -10,8 +10,12 @@ class Bot:
     def __init__(self, token):
         self.token = token
         self.incoming = []
+        self.routes = {
+            "/notifu": self._notify,
+            "/list": self._list
+        }
         
-    def get_incoming(self):
+    def _get_incoming(self):
         params = {
             'timeout': 1,
         }
@@ -28,40 +32,39 @@ class Bot:
                     elif 'edited_message' in item:
                         self.incoming.append(item['edited_message'])
                 
-    
     def start(self, timeout=2):
         while True:
-            self.get_incoming()
+            self._get_incoming()
 
+            # TODO: выяснить, как удалить полученное сообщение из апдейтов
             if self.incoming:
                 for message in self.incoming:
-                    chat_id = message['chat']['id']
-                    # message_id = message['message_id']
-                    self.send_message(chat_id, "Fuck off")
+                    # TODO: parse command from message text
+                    command = message['text'].split()[0]
+                    if command in self.routes.keys():
+                        self.routes[command](message)
                 self.incoming = []
             else:
                 time.sleep(timeout)
 
-    def send_message(self, chat_id, message):
+    def _send_message(self, chat_id, message):
         payload = {
             "chat_id": chat_id,
             "text": message
         }
         result = requests.post("https://api.telegram.org/bot%s/sendMessage" % self.token, params=payload, timeout=10, proxies=PROXY_LIST)
         if not result.ok:
+            # TODO: обрабатывать ошибки
             print("Can't send message")
-        # print(result)
-            
-    def route_command(self, command):
-        """
-            Routing method
-        """
-        if command == "notify":
-            pass
-        elif command == "listnotify":
-            pass
-        elif command == "rmnotify":
-            pass
+    
+    def _notify(self, message):
+        print("Writing info about notification")
+        # TODO: сохранение настроек уведомления (написать для него отдельный класс)
+        reply_text = "Уведомление создано"
+        self._send_message(message['chat']['id'], reply_text)
+
+    def _list(self, message):
+        pass
 
 
 if __name__ == "__main__":
