@@ -2,8 +2,10 @@ import os
 import requests
 import socks
 import time
+from datetime import datetime
 
 PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
+REGEX_PATTERN = "^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 
 class Bot:
 
@@ -12,9 +14,14 @@ class Bot:
         self.incoming = []
         self.update_id = None
         self.routes = {
+            "/start": self._start,
             "/notifu": self._notify,
-            "/list": self._list
+            "/list": self._list,
+            "/rm": self._rm,
+            "/edit": self._edit,
+            "/settz": self._set_time_zone
         }
+        self.notifu = {}
         
     def _get_incoming(self):
         params = {
@@ -39,11 +46,11 @@ class Bot:
                 
     def start(self, timeout=2):
         while True:
+            # TODO: add time checking and notification logic
             self._get_incoming()
 
             if self.incoming:
                 for message in self.incoming:
-                    # TODO: parse command from message text
                     command = message['text'].split()[0]
                     if command in self.routes.keys():
                         self.routes[command](message)
@@ -64,11 +71,47 @@ class Bot:
     def _notify(self, message):
         print("Writing info about notification")
         # TODO: сохранение настроек уведомления (написать для него отдельный класс)
+        timestamp, message_text = parse_notifu(message['text'])
+        chat_id = message['chat']['id']
+        if chat_id not in self.notifu.keys():
+            self.notifu[chat_id] = {}
+        self.notifu[chat_id][timestamp] = message_text
         reply_text = "Уведомление создано"
-        self._send_message(message['chat']['id'], reply_text)
+        self._send_message(chat_id, reply_text)
 
     def _list(self, message):
         pass
+    
+    def _rm(self, message):
+        pass
+    
+    def _edit(self, message):
+        pass
+
+    def _set_time_zone(self, message):
+        pass
+
+    def _start(self, message):
+        pass
+
+def parse_notifu(text):
+    import re
+    match = re.search(REGEX_PATTERN, text)
+
+    # TODO: handle cases with date/time overflow (e.g. 25:60)
+    date_str = match.group(2).strip()   
+    # TODO: remove hardcode to pick current year
+    if len(date_str) == 0:
+        date_ = datetime.today()
+    elif len(date_str) == 5:
+        date_ = datetime.strptime(date_str+"2019", "%d.%m%Y")
+    else:
+        date_ = datetime.strptime(date_str, "%d.%m.%Y")
+        
+    time_ = datetime.strptime(match.group(3).strip(), "%H:%M")
+    text_str = match.group(4).strip()
+    dt = datetime.combine(date_.date(), time_.time())
+    return (dt.timestamp(), text_str)
 
 
 if __name__ == "__main__":
