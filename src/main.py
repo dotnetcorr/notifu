@@ -10,6 +10,7 @@ class Bot:
     def __init__(self, token):
         self.token = token
         self.incoming = []
+        self.update_id = None
         self.routes = {
             "/notifu": self._notify,
             "/list": self._list
@@ -19,10 +20,14 @@ class Bot:
         params = {
             'timeout': 1,
         }
+
+        if self.update_id:
+            params['offset'] = self.update_id + 1
+
         r = requests.post("https://api.telegram.org/bot%s/getUpdates" % self.token, params=params, timeout=10, proxies=PROXY_LIST)
         if r.ok:
             response = r.json()
-            print(response)
+            # print(response)
 
             if response['result']:
                 for item in response['result']:
@@ -36,7 +41,6 @@ class Bot:
         while True:
             self._get_incoming()
 
-            # TODO: выяснить, как удалить полученное сообщение из апдейтов
             if self.incoming:
                 for message in self.incoming:
                     # TODO: parse command from message text
