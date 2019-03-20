@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
-REGEX_PATTERN = "^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
+REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 
 class Bot:
 
@@ -65,18 +65,17 @@ class Bot:
         }
         result = requests.post("https://api.telegram.org/bot%s/sendMessage" % self.token, params=payload, timeout=10, proxies=PROXY_LIST)
         if not result.ok:
-            # TODO: обрабатывать ошибки
+            # TODO: handle errors
             print("Can't send message")
     
     def _notify(self, message):
         print("Writing info about notification")
-        # TODO: сохранение настроек уведомления (написать для него отдельный класс)
         timestamp, message_text = parse_notifu(message['text'])
         chat_id = message['chat']['id']
         if chat_id not in self.notifu.keys():
             self.notifu[chat_id] = {}
         self.notifu[chat_id][timestamp] = message_text
-        reply_text = "Уведомление создано"
+        reply_text = u"Уведомление создано"
         self._send_message(chat_id, reply_text)
 
     def _list(self, message):
@@ -107,7 +106,7 @@ def parse_notifu(text):
         date_ = datetime.strptime(date_str+"2019", "%d.%m%Y")
     else:
         date_ = datetime.strptime(date_str, "%d.%m.%Y")
-        
+
     time_ = datetime.strptime(match.group(3).strip(), "%H:%M")
     text_str = match.group(4).strip()
     dt = datetime.combine(date_.date(), time_.time())
