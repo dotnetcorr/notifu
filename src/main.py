@@ -6,6 +6,7 @@ from datetime import datetime
 
 PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
 REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
+MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me 
 
 class Bot:
 
@@ -22,6 +23,7 @@ class Bot:
             "/settz": self._set_time_zone
         }
         self.notifu = {}
+        self._nearest_timestamps = {}
         
     def _get_incoming(self):
         params = {
@@ -43,10 +45,33 @@ class Bot:
                         self.incoming.append(item['message'])
                     elif 'edited_message' in item:
                         self.incoming.append(item['edited_message'])
-                
+    
+    def _handle_notifications(self):
+        for chat_id, timestamp in self._nearest_timestamps.items():
+            if timestamp <= time.time():
+                self._send_message(chat_id, self.notifu[chat_id].pop(timestamp))
+                self._set_nearest_timestamp(chat_id)
+            # TODO: remove current timestamp from notifu
+            # NB! maybe saving current timestamp for snooze is better
+            # TODO: add next nearest timestamp to chat_id
+
+    def _set_nearest_timestamp(self, chat_id):
+        min_ts = MAX_TIME
+        for timestamp in self.notifu[chat_id].keys():
+            if timestamp < min_ts:
+                min_ts = timestamp
+        self._nearest_timestamps[chat_id] = min_ts
+
+    def _add_notification(self, chat_id, timestamp, text):
+        self.notifu[chat_id][timestamp] = text
+        if timestamp < self._nearest_timestamps.pop(chat_id, MAX_TIME):
+            self._nearest_timestamps[chat_id] = timestamp
+
     def start(self, timeout=2):
         while True:
             # TODO: add time checking and notification logic
+            # TODO: handle timezones correct
+            self._handle_notifications()
             self._get_incoming()
 
             if self.incoming:
@@ -70,12 +95,18 @@ class Bot:
     
     def _notify(self, message):
         print("Writing info about notification")
-        timestamp, message_text = parse_notifu(message['text'])
         chat_id = message['chat']['id']
-        if chat_id not in self.notifu.keys():
-            self.notifu[chat_id] = {}
-        self.notifu[chat_id][timestamp] = message_text
-        reply_text = u"Уведомление создано"
+        dt, message_text = parse_notifu(message['text'])
+        if dt is None:
+            reply_text = u"Хорошая попытка... нет."
+        elif is_datetime_valid(dt):
+            if chat_id not in self.notifu.keys():
+                self.notifu[chat_id] = {}
+            self._add_notification(chat_id, dt.timestamp(), message_text)
+            dt_str = dt.strftime("%d.%m.%Y %H:%M")
+            reply_text = u"Уведомление на {0} успешно создано.".format(dt_str) 
+        else:
+            reply_text = u'Это надо было делать раньше, а раньше уже закончилось, юзернейм.'
         self._send_message(chat_id, reply_text)
 
     def _list(self, message):
@@ -97,6 +128,10 @@ def parse_notifu(text):
     import re
     match = re.search(REGEX_PATTERN, text)
 
+    if match is None:
+        print("Parsing failed")
+        # Throw something
+        return (None, None)
     # TODO: handle cases with date/time overflow (e.g. 25:60)
     date_str = match.group(2).strip()   
     # TODO: remove hardcode to pick current year
@@ -110,8 +145,10 @@ def parse_notifu(text):
     time_ = datetime.strptime(match.group(3).strip(), "%H:%M")
     text_str = match.group(4).strip()
     dt = datetime.combine(date_.date(), time_.time())
-    return (dt.timestamp(), text_str)
+    return (dt, text_str)
 
+def is_datetime_valid(dt):
+    return dt > datetime.today()
 
 if __name__ == "__main__":
     bot = Bot(os.environ["NOTIFU_TOKEN"])
