@@ -2,11 +2,18 @@ import os
 import requests
 import socks
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from logger_factory import LoggerFactory
 
 PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
 REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me 
+START_MESSAGE = u"""Noti-Fu создан для того, чтобы ты не забыл что-нибудь важное, юзернейм.\n
+Чтобы создать напоминание, используй команду \n\"/notifu [дата] [время] [сообщение]\".\n
+где дата - день.месяц или день.месяц.год,
+    время в 24-часовом формате\n
+Например: /notifu {0} Не забыть покормить котика."""
 
 class Bot:
 
@@ -22,21 +29,23 @@ class Bot:
             "/edit": self._edit,
             "/settz": self._set_time_zone
         }
+        # TODO: придумать другую структуру. В текущей сложно обращаться к отдельному напоминанию
         self.notifu = {}
         self._nearest_timestamps = {}
+        self.__logger = LoggerFactory.create_logger(name=self.__class__.__name__)
         
     def _get_incoming(self):
         params = {
-            'timeout': 1,
+            'timeout': 3,
         }
 
         if self.update_id:
             params['offset'] = self.update_id + 1
 
+        self.__logger.info("Trying get incoming messages")
         r = requests.post("https://api.telegram.org/bot%s/getUpdates" % self.token, params=params, timeout=10, proxies=PROXY_LIST)
         if r.ok:
             response = r.json()
-            # print(response)
 
             if response['result']:
                 for item in response['result']:
@@ -69,7 +78,6 @@ class Bot:
 
     def start(self, timeout=2):
         while True:
-            # TODO: add time checking and notification logic
             # TODO: handle timezones correct
             self._handle_notifications()
             self._get_incoming()
@@ -104,7 +112,7 @@ class Bot:
                 self.notifu[chat_id] = {}
             self._add_notification(chat_id, dt.timestamp(), message_text)
             dt_str = dt.strftime("%d.%m.%Y %H:%M")
-            reply_text = u"Уведомление на {0} успешно создано.".format(dt_str) 
+            reply_text = u"Напоминание на {0} успешно создано.".format(dt_str) 
         else:
             reply_text = u'Это надо было делать раньше, а раньше уже закончилось, юзернейм.'
         self._send_message(chat_id, reply_text)
@@ -122,7 +130,12 @@ class Bot:
         pass
 
     def _start(self, message):
-        pass
+        chat_id = message['chat']['id']
+        dt = datetime.today() + timedelta(seconds=120)
+        dt_str = dt.strftime("%d.%m %H:%M")
+        reply_text = START_MESSAGE.format(dt_str) 
+        self._send_message(chat_id, reply_text)
+        
 
 def parse_notifu(text):
     import re
