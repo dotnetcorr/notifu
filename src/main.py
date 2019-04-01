@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 
 from logger_factory import LoggerFactory
+from notifu import Notifu, Notification
 
 PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
 REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
@@ -31,7 +32,7 @@ class Bot:
         }
         # TODO: придумать другую структуру. В текущей сложно обращаться к отдельному напоминанию
         self.notifu = {}
-        self._nearest_timestamps = {}
+        # self._nearest_timestamps = {}
         self.__logger = LoggerFactory.create_logger(name=self.__class__.__name__)
         
     def _get_incoming(self):
@@ -56,27 +57,20 @@ class Bot:
                         self.incoming.append(item['edited_message'])
     
     def _handle_notifications(self):
-        for chat_id, timestamp in self._nearest_timestamps.items():
-            if timestamp <= time.time():
-                self._send_message(chat_id, self.notifu[chat_id].pop(timestamp))
-                self._set_nearest_timestamp(chat_id)
+        # for chat_id, timestamp in self._nearest_timestamps.items():
+        for chat_id, notifu_item in self.notifu.items():
+            if notifu_item.closest_ts <= time.time():
+                notifications = notifu_item.get_notifications(time.time())
+                for notification in notifications:
+                    self._send_message(chat_id, notification.text)
             # TODO: remove current timestamp from notifu
             # NB! maybe saving current timestamp for snooze is better
             # TODO: add next nearest timestamp to chat_id
 
-    def _set_nearest_timestamp(self, chat_id):
-        min_ts = MAX_TIME
-        for timestamp in self.notifu[chat_id].keys():
-            if timestamp < min_ts:
-                min_ts = timestamp
-        self._nearest_timestamps[chat_id] = min_ts
-
     def _add_notification(self, chat_id, timestamp, text):
-        self.notifu[chat_id][timestamp] = text
-        if timestamp < self._nearest_timestamps.pop(chat_id, MAX_TIME):
-            self._nearest_timestamps[chat_id] = timestamp
+        self.notifu[chat_id].add_notification(timestamp, text)
 
-    def start(self, timeout=2):
+    def start(self, timeout=1):
         while True:
             # TODO: handle timezones correct
             self._handle_notifications()
@@ -102,6 +96,7 @@ class Bot:
             print("Can't send message")
     
     def _notify(self, message):
+        # TODO: take care of this spagetti code
         print("Writing info about notification")
         chat_id = message['chat']['id']
         dt, message_text = parse_notifu(message['text'])
@@ -109,7 +104,7 @@ class Bot:
             reply_text = u"Хорошая попытка... нет."
         elif is_datetime_valid(dt):
             if chat_id not in self.notifu.keys():
-                self.notifu[chat_id] = {}
+                self.notifu[chat_id] = Notifu(chat_id=chat_id)
             self._add_notification(chat_id, dt.timestamp(), message_text)
             dt_str = dt.strftime("%d.%m.%Y %H:%M")
             reply_text = u"Напоминание на {0} успешно создано.".format(dt_str) 
