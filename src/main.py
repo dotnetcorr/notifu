@@ -6,15 +6,12 @@ from datetime import datetime, timedelta
 
 from logger_factory import LoggerFactory
 from notifu import Notifu, Notification
+import strings
 
 PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
 REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me 
-START_MESSAGE = u"""Noti-Fu создан для того, чтобы ты не забыл что-нибудь важное, юзернейм.\n
-Чтобы создать напоминание, используй команду \n\"/notifu [дата] [время] [сообщение]\".\n
-где дата - день.месяц или день.месяц.год,
-    время в 24-часовом формате\n
-Например: /notifu {0} Не забыть покормить котика."""
+
 
 class Bot:
 
@@ -104,7 +101,7 @@ class Bot:
             reply_text = u"Хорошая попытка... нет."
         elif is_datetime_valid(dt):
             if chat_id not in self.notifu.keys():
-                self.notifu[chat_id] = Notifu(chat_id=chat_id)
+                self._notify_default_tz(chat_id)
             self._add_notification(chat_id, dt.timestamp(), message_text)
             dt_str = dt.strftime("%d.%m.%Y %H:%M")
             reply_text = u"Напоминание на {0} успешно создано.".format(dt_str) 
@@ -122,15 +119,32 @@ class Bot:
         pass
 
     def _set_time_zone(self, message):
+        chat_id = message['chat']['id']
+        timezone = parse_tz(message['text'])
+        # TODO: handle possible errors from timezone parsing
+        if chat_id not in self.notifu.keys():
+            self.notifu[chat_id] = Notifu(chat_id=chat_id, timezone=timezone)
+        else:
+            self.notifu[chat_id].set_timezone(timezone)
         pass
 
     def _start(self, message):
         chat_id = message['chat']['id']
         dt = datetime.today() + timedelta(seconds=120)
         dt_str = dt.strftime("%d.%m %H:%M")
-        reply_text = START_MESSAGE.format(dt_str) 
+        reply_text = strings.START_MESSAGE.format(dt_str) 
         self._send_message(chat_id, reply_text)
-        
+        if chat_id not in self.notifu.keys():
+            self._notify_default_tz(chat_id)
+    
+    def _notify_default_tz(self, chat_id):
+        self.notifu[chat_id] = Notifu(chat_id=chat_id)
+        self._send_message(chat_id, strings.TZ_SUGGEST)
+
+
+def parse_tz(text):
+    tz = text.split(' ')[-1]
+    return tz
 
 def parse_notifu(text):
     import re
@@ -155,6 +169,7 @@ def parse_notifu(text):
     dt = datetime.combine(date_.date(), time_.time())
     return (dt, text_str)
 
+# TODO: move to notifu class
 def is_datetime_valid(dt):
     return dt > datetime.today()
 

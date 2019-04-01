@@ -1,4 +1,5 @@
 from datetime import datetime
+import pytz
 
 # MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me
 
@@ -6,10 +7,11 @@ class Notifu:
     """
     Container for notifications
     """
-    def __init__(self, chat_id):
+    def __init__(self, chat_id, timezone="UTC"):
         self.chat_id = chat_id
         self.notifications = []
         self.closest_ts = None
+        self.timezone = pytz.timezone(timezone)
 
     def _resort_array(self):
         self.notifications.sort(key=lambda n: n.timestamp)
@@ -39,6 +41,10 @@ class Notifu:
             else:
                 break
         return notifications_list
+
+    def set_timezone(self, timezone):
+        # TODO: return offset from UTC
+        self.timezone = pytz.timezone(timezone)
     
 class Notification:
     def __init__(self, start_ts, text, period=[]):
