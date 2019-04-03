@@ -10,7 +10,6 @@ import strings
 
 PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
 REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
-MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me 
 
 
 class Bot:
@@ -54,18 +53,12 @@ class Bot:
                         self.incoming.append(item['edited_message'])
     
     def _handle_notifications(self):
-        # for chat_id, timestamp in self._nearest_timestamps.items():
         for chat_id, notifu_item in self.notifu.items():
             if notifu_item.closest_ts <= time.time():
                 notifications = notifu_item.get_notifications(time.time())
                 for notification in notifications:
                     self._send_message(chat_id, notification.text)
-            # TODO: remove current timestamp from notifu
             # NB! maybe saving current timestamp for snooze is better
-            # TODO: add next nearest timestamp to chat_id
-
-    def _add_notification(self, chat_id, timestamp, text):
-        self.notifu[chat_id].add_notification(timestamp, text)
 
     def start(self, timeout=1):
         while True:
@@ -93,21 +86,22 @@ class Bot:
             print("Can't send message")
     
     def _notify(self, message):
-        # TODO: take care of this spagetti code
+        # TODO: take care of this spaghetti code
         print("Writing info about notification")
         chat_id = message['chat']['id']
-        dt, message_text = parse_notifu(message['text'])
-        if dt is None:
-            reply_text = u"Хорошая попытка... нет."
-        elif is_datetime_valid(dt):
+        try:
+            notification = Notification.from_message(message['text'])
             if chat_id not in self.notifu.keys():
+                self.notifu[chat_id] = Notifu(chat_id=chat_id)
                 self._notify_default_tz(chat_id)
-            self._add_notification(chat_id, dt.timestamp(), message_text)
-            dt_str = dt.strftime("%d.%m.%Y %H:%M")
-            reply_text = u"Напоминание на {0} успешно создано.".format(dt_str) 
-        else:
-            reply_text = u'Это надо было делать раньше, а раньше уже закончилось, юзернейм.'
-        self._send_message(chat_id, reply_text)
+            self.notifu[chat_id].add_notification(notification)
+            dt_str = notification.datetime.strftime("%d.%m.%Y %H:%M")
+            reply_text = strings.SUCCESS_ADDED_NOTIFICATION.format(dt_str)
+        except Exception:
+            # TODO: catch different types of exception (no_dt_ex and dt_not_valid_ex)
+            reply_text = strings.ERR_TRICKY
+        finally:
+            self._send_message(chat_id, reply_text)
 
     def _list(self, message):
         pass
@@ -120,13 +114,18 @@ class Bot:
 
     def _set_time_zone(self, message):
         chat_id = message['chat']['id']
-        timezone = parse_tz(message['text'])
+        tz_str = message['text'].split(' ')[-1]
         # TODO: handle possible errors from timezone parsing
         if chat_id not in self.notifu.keys():
-            self.notifu[chat_id] = Notifu(chat_id=chat_id, timezone=timezone)
-        else:
-            self.notifu[chat_id].set_timezone(timezone)
-        pass
+            self.notifu[chat_id] = Notifu(chat_id=chat_id)
+        try:
+            self.notifu[chat_id].set_timezone(tz_str)
+            reply_text = strings.SUCCESS_SET_TZ.format(tz_str)
+        # TODO: catch right exception
+        except Exception: 
+            reply_text = strings.ERR_SET_TZ
+        finally:
+            self._send_message(chat_id, reply_text)
 
     def _start(self, message):
         chat_id = message['chat']['id']
@@ -141,37 +140,6 @@ class Bot:
         self.notifu[chat_id] = Notifu(chat_id=chat_id)
         self._send_message(chat_id, strings.TZ_SUGGEST)
 
-
-def parse_tz(text):
-    tz = text.split(' ')[-1]
-    return tz
-
-def parse_notifu(text):
-    import re
-    match = re.search(REGEX_PATTERN, text)
-
-    if match is None:
-        print("Parsing failed")
-        # Throw something
-        return (None, None)
-    # TODO: handle cases with date/time overflow (e.g. 25:60)
-    date_str = match.group(2).strip()   
-    # TODO: remove hardcode to pick current year
-    if len(date_str) == 0:
-        date_ = datetime.today()
-    elif len(date_str) == 5:
-        date_ = datetime.strptime(date_str+"2019", "%d.%m%Y")
-    else:
-        date_ = datetime.strptime(date_str, "%d.%m.%Y")
-
-    time_ = datetime.strptime(match.group(3).strip(), "%H:%M")
-    text_str = match.group(4).strip()
-    dt = datetime.combine(date_.date(), time_.time())
-    return (dt, text_str)
-
-# TODO: move to notifu class
-def is_datetime_valid(dt):
-    return dt > datetime.today()
 
 if __name__ == "__main__":
     bot = Bot(os.environ["NOTIFU_TOKEN"])
