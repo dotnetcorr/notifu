@@ -28,6 +28,7 @@ class Notifu:
             raise Exception()
         self.__notifications.append(notification)
         self._resort_array()
+        return notification.datetime.strftime("%d.%m.%Y %H:%M %z")
 
     def remove_notification(self, index):
         # remove by index in notifications array

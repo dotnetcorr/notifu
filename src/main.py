@@ -90,8 +90,7 @@ class Bot:
             notification = Notification.from_message(message['text'])
             notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
             # self.notifu[chat_id].add_notification(notification)
-            notifu.add_notification(notification)
-            dt_str = notification.datetime.strftime("%d.%m.%Y %H:%M")
+            dt_str = notifu.add_notification(notification)
             reply_text = strings.SUCCESS_ADDED_NOTIFICATION.format(dt_str)
         except Exception:
             # TODO: catch different types of exception (no_dt_ex and dt_not_valid_ex)
