@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime
+import time
+
 import pytz
 
 MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me
@@ -8,24 +10,24 @@ class Notifu:
     """
     Container for notifications
     """
-    def __init__(self, chat_id, timezone=timezone.utc):
-        self.__chat_id = chat_id
+    def __init__(self, chat_id, timezone=pytz.utc):
+        self.chat_id = chat_id
+        self.closest_ts = MAX_TIME
         self.__notifications = []
-        self.__closest_ts = MAX_TIME
         self.__timezone = timezone
 
     def _resort_array(self):
         self.__notifications.sort(key=lambda n: n.timestamp)
-        self.__closest_ts = self.__notifications[0].timestamp
+        self.closest_ts = self.__notifications[0].timestamp
 
     def add_notification(self, notification):
-        notification.set_timestamp(self.__timezone)
+        notification.set_timezone(self.__timezone)
         # TODO: check datetime validity (if notification is later than now)
-        if not is_datetime_valid:
+        if notification.timestamp <= time.time():
             # TODO: Write specific exception
             raise Exception()
         self.__notifications.append(notification)
-        self._resort_array
+        self._resort_array()
 
     def remove_notification(self, index):
         # remove by index in notifications array
@@ -38,7 +40,7 @@ class Notifu:
         # TODO: handle periods (change timestamp instead removing)
         notifications_list = []
         for notification in list(self.__notifications):
-            if notification.timestamp <= timestamp:
+            if notification.datetime.timestamp() <= timestamp:
                 notifications_list.append(notification)
                 self.__notifications.remove(notification)
             else:
@@ -51,14 +53,16 @@ class Notifu:
     
 
 class Notification:
-    def __init__(self, datetime, text, timestamp=None, period=[]):
+    def __init__(self, datetime, text, period=[]):
         self.datetime = datetime
-        self.timestamp = timestamp
+        self.timestamp = datetime.timestamp()
         self.text = text
         self.period = period
 
-    def set_timestamp(self, tz):
-        self.timestamp = self.datetime.replace(tzinfo=tz).timestamp()
+    def set_timezone(self, tz):
+        # TODO: use only pytz timezone object
+        self.datetime = tz.localize(self.datetime)
+        self.timestamp = self.datetime.timestamp()
     
     @staticmethod
     def from_message(text):
@@ -70,7 +74,7 @@ class Notification:
             # Throw something
             return None
         # TODO: handle cases with date/time overflow (e.g. 25:60)
-        date_str = match.group(2).strip()   
+        date_str = match.group(2).strip()
         # TODO: remove hardcode to pick current year
         if len(date_str) == 0:
             date_ = datetime.today()
@@ -83,7 +87,3 @@ class Notification:
         text_str = match.group(4).strip()
         dt = datetime.combine(date_.date(), time_.time())
         return Notification(datetime=dt, text=text_str)
-
-
-def is_datetime_valid(dt):
-    return dt > datetime.today()

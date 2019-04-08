@@ -26,9 +26,7 @@ class Bot:
             "/edit": self._edit,
             "/settz": self._set_time_zone
         }
-        # TODO: придумать другую структуру. В текущей сложно обращаться к отдельному напоминанию
-        self.notifu = {}
-        # self._nearest_timestamps = {}
+        self.notifu = {}    # { chat_id : notifu_obj }
         self.__logger = LoggerFactory.create_logger(name=self.__class__.__name__)
         
     def _get_incoming(self):
@@ -91,10 +89,9 @@ class Bot:
         chat_id = message['chat']['id']
         try:
             notification = Notification.from_message(message['text'])
-            if chat_id not in self.notifu.keys():
-                self.notifu[chat_id] = Notifu(chat_id=chat_id)
-                self._notify_default_tz(chat_id)
-            self.notifu[chat_id].add_notification(notification)
+            notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
+            # self.notifu[chat_id].add_notification(notification)
+            notifu.add_notification(notification)
             dt_str = notification.datetime.strftime("%d.%m.%Y %H:%M")
             reply_text = strings.SUCCESS_ADDED_NOTIFICATION.format(dt_str)
         except Exception:
@@ -116,8 +113,7 @@ class Bot:
         chat_id = message['chat']['id']
         tz_str = message['text'].split(' ')[-1]
         # TODO: handle possible errors from timezone parsing
-        if chat_id not in self.notifu.keys():
-            self.notifu[chat_id] = Notifu(chat_id=chat_id)
+        self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
         try:
             self.notifu[chat_id].set_timezone(tz_str)
             reply_text = strings.SUCCESS_SET_TZ.format(tz_str)
@@ -134,10 +130,10 @@ class Bot:
         reply_text = strings.START_MESSAGE.format(dt_str) 
         self._send_message(chat_id, reply_text)
         if chat_id not in self.notifu.keys():
+            self.notifu[chat_id] = Notifu(chat_id=chat_id)
             self._notify_default_tz(chat_id)
     
     def _notify_default_tz(self, chat_id):
-        self.notifu[chat_id] = Notifu(chat_id=chat_id)
         self._send_message(chat_id, strings.TZ_SUGGEST)
 
 
