@@ -56,7 +56,6 @@ class Bot:
                 notifications = notifu_item.get_notifications(time.time())
                 for notification in notifications:
                     self._send_message(chat_id, notification.text)
-            # NB! maybe saving current timestamp for snooze is better
 
     def start(self, timeout=1):
         while True:
