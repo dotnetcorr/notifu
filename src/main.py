@@ -8,7 +8,10 @@ from logger_factory import LoggerFactory
 from notifu import Notifu, Notification
 import strings
 
-PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
+if bool(int(os.environ.get("NOTIFU_USE_PROXY", "0"))):
+    PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
+else:
+    PROXY_LIST = None
 REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 
 
@@ -20,7 +23,7 @@ class Bot:
         self.update_id = None
         self.routes = {
             "/start": self._start,
-            "/notifu": self._notify,
+            "/notifu": self._add_notification,
             "/list": self._list,
             "/rm": self._rm,
             "/edit": self._edit,
@@ -82,7 +85,7 @@ class Bot:
             # TODO: handle errors
             print("Can't send message")
     
-    def _notify(self, message):
+    def _add_notification(self, message):
         # TODO: take care of this spaghetti code
         print("Writing info about notification")
         chat_id = message['chat']['id']
