@@ -1,4 +1,5 @@
 from datetime import datetime
+import pickle
 import time
 
 import pytz
@@ -15,10 +16,12 @@ class Notifu:
         self.closest_ts = MAX_TIME
         self.__notifications = []
         self.__timezone = timezone
+        self.__store()
 
     def _resort_array(self):
         self.__notifications.sort(key=lambda n: n.timestamp)
         self.closest_ts = self.__notifications[0].timestamp
+        self.__store()
 
     def add_notification(self, notification):
         notification.set_timezone(self.__timezone)
@@ -46,6 +49,8 @@ class Notifu:
                 self.__notifications.remove(notification)
             else:
                 break
+        if len(notifications_list) > 0:
+            self.__store()
         return notifications_list
 
     def get_all_notifications(self):
@@ -57,7 +62,17 @@ class Notifu:
     def set_timezone(self, timezone):
         # TODO: return offset from UTC as +[-]XX
         self.__timezone = pytz.timezone(timezone)
+        self.__store()
+
+    def __store(self):
+        with open("storage/{0}.pkl".format(self.chat_id), 'wb') as f_out:
+            pickle.dump(self, f_out)
     
+    @staticmethod
+    def from_pickle(filename):
+        with open("storage/"+filename, 'rb') as f_in:
+            return pickle.load(f_in)
+
 
 class Notification:
     def __init__(self, datetime, text, period=[]):

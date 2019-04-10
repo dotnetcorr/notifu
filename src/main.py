@@ -32,6 +32,11 @@ class Bot:
         }
         self.notifu = {}    # { chat_id : notifu_obj }
         self.__logger = LoggerFactory.create_logger(name=self.__class__.__name__)
+        for f in os.listdir("storage"):
+            obj = Notifu.from_pickle(f)
+            if obj:
+                self.notifu[obj.chat_id] = obj
+        print("Restored {0} notifu".format(len(self.notifu.keys())))
         
     def _get_incoming(self):
         params = {
@@ -120,10 +125,10 @@ class Bot:
         chat_id = message['chat']['id']
         tz_str = message['text'].split(' ')[-1]
         # TODO: handle possible errors from timezone parsing
-        self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
+        notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
         try:
-            self.notifu[chat_id].set_timezone(tz_str)
-            reply_text = strings.SUCCESS_SET_TZ.format(tz_str)
+            notifu.set_timezone(tz_str)
+            reply_text = strings.SUCCESS_SET_TZ.format(notifu.get_timezone_str())
         # TODO: catch right exception
         except Exception: 
             reply_text = strings.ERR_SET_TZ
