@@ -93,7 +93,6 @@ class Bot:
         try:
             notification = Notification.from_message(message['text'])
             notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
-            # self.notifu[chat_id].add_notification(notification)
             dt_str = notifu.add_notification(notification)
             reply_text = strings.SUCCESS_ADDED_NOTIFICATION.format(dt_str)
         except Exception:
@@ -142,7 +141,10 @@ class Bot:
             self._notify_default_tz(chat_id)
     
     def _help(self, message):
-        pass
+        chat_id = message['chat']['id']
+        notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
+        reply_text = strings.HELP_MESSAGE.format(notifu.get_timezone_str())
+        self._send_message(chat_id, reply_text)
 
     def _notify_default_tz(self, chat_id):
         self._send_message(chat_id, strings.TZ_SUGGEST)

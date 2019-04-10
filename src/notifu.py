@@ -51,6 +51,9 @@ class Notifu:
     def get_all_notifications(self):
         return self.__notifications
 
+    def get_timezone_str(self):
+        return self.__timezone.zone
+
     def set_timezone(self, timezone):
         # TODO: return offset from UTC as +[-]XX
         self.__timezone = pytz.timezone(timezone)
