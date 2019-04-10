@@ -23,6 +23,7 @@ class Bot:
         self.update_id = None
         self.routes = {
             "/start": self._start,
+            "/help": self._help,
             "/notifu": self._add_notification,
             "/list": self._list,
             "/rm": self._rm,
@@ -140,6 +141,9 @@ class Bot:
             self.notifu[chat_id] = Notifu(chat_id=chat_id)
             self._notify_default_tz(chat_id)
     
+    def _help(self, message):
+        pass
+
     def _notify_default_tz(self, chat_id):
         self._send_message(chat_id, strings.TZ_SUGGEST)
 
