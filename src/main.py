@@ -40,7 +40,7 @@ class Bot:
         if self.update_id:
             params['offset'] = self.update_id + 1
 
-        self.__logger.info("Trying get incoming messages")
+        # self.__logger.info("Trying get incoming messages")
         r = requests.post("https://api.telegram.org/bot%s/getUpdates" % self.token, params=params, timeout=10, proxies=PROXY_LIST)
         if r.ok:
             response = r.json()
@@ -102,9 +102,15 @@ class Bot:
             self._send_message(chat_id, reply_text)
 
     def _list(self, message):
-        pass
+        chat_id = message['chat']['id']
+        notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
+        notifications = notifu.get_all_notifications()
+        output_str = '\n'.join(["{0}. {1}".format(n+1, str(o)) for n, o in enumerate(notifications)])
+        self._send_message(chat_id, output_str)
+
     
     def _rm(self, message):
+        # TODO: remove item with n-1 index (because for user it starts from 1)
         pass
     
     def _edit(self, message):

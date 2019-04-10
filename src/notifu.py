@@ -48,6 +48,9 @@ class Notifu:
                 break
         return notifications_list
 
+    def get_all_notifications(self):
+        return self.__notifications
+
     def set_timezone(self, timezone):
         # TODO: return offset from UTC as +[-]XX
         self.__timezone = pytz.timezone(timezone)
@@ -65,6 +68,9 @@ class Notification:
         self.datetime = tz.localize(self.datetime)
         self.timestamp = self.datetime.timestamp()
     
+    def __str__(self):
+        return self.datetime.strftime("%d.%m.%Y %H:%M UTC%z") + ' ' + self.text
+
     @staticmethod
     def from_message(text):
         import re
