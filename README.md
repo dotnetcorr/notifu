@@ -9,7 +9,7 @@ Telegram bot for notifications (ex-planned-part of Task-Fu)
 - [ ] Change markup of notification text for more readability
 - [ ] Make start and help commands more useful
 - [x] (optional) Handle dictionary keys without setdefault (due to redundant constructor calls)
-- [ ] Show timezones in every notification
+- [x] Show timezones in every notification
 - [x] Implement help command handling
 - [x] Implement notification removing logic
 - [ ] (optional) Use buttons to manipulate timezones

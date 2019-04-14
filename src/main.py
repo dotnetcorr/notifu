@@ -21,6 +21,8 @@ else:
 class Bot:
 
     def __init__(self, token):
+        self.__logger = LoggerFactory.create_logger(name=self.__class__.__name__)
+        self.__logger.info("Initializing bot... ")
         self.token = token
         self.incoming = []
         self.update_id = None
@@ -34,12 +36,11 @@ class Bot:
             "/settz": self._set_time_zone
         }
         self.notifu = {}    # { chat_id : notifu_obj }
-        self.__logger = LoggerFactory.create_logger(name=self.__class__.__name__)
         for f in os.listdir("storage"):
             obj = Notifu.from_pickle(f)
             if obj:
                 self.notifu[obj.chat_id] = obj
-        print("Restored {0} notifu".format(len(self.notifu.keys())))
+                self.__logger.info("Restored notifu for chat {0}".format(obj.chat_id))
         
     def _get_incoming(self):
         params = {
@@ -73,8 +74,8 @@ class Bot:
                     self._send_message(chat_id, notification.text)
 
     def start(self, timeout=1):
+        self.__logger.info("Started.")
         while True:
-            # TODO: handle timezones correct
             self._handle_notifications()
             self._get_incoming()
 

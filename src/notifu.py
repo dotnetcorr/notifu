@@ -44,8 +44,6 @@ class Notifu:
         notification = self.__notifications.pop(index)
         self.__store()
         return notification
-        # maybe there's no need to resort
-        # self._resort_array()
 
     def get_notifications(self, timestamp):
         # pop notifications behind timestamp, return them and update closest_ts
@@ -98,7 +96,6 @@ class Notification:
         self.period = period
 
     def set_timezone(self, tz):
-        # TODO: use only pytz timezone object
         self.datetime = tz.localize(self.datetime)
         self.timestamp = self.datetime.timestamp()
     
