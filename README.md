@@ -8,7 +8,7 @@ Telegram bot for notifications (ex-planned-part of Task-Fu)
 - [ ] Handle errors correctly, write to log
 - [ ] Change markup of notification text for more readability
 - [ ] Make start and help commands more useful
-- [ ] (optional) Handle dictionary keys without setdefault (due to redundant constructor calls)
+- [x] (optional) Handle dictionary keys without setdefault (due to redundant constructor calls)
 - [ ] Show timezones in every notification
 - [x] Implement help command handling
 - [ ] Implement notification removing logic
@@ -19,7 +19,6 @@ Telegram bot for notifications (ex-planned-part of Task-Fu)
 
 ## Notes
 - Simple persistence implemented with pickles. Cases when notifu will be stored:
-    * Creating a new notifu object
     * Changing a timezone
     * Adding a new notification
     * Removing notification

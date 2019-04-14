@@ -5,10 +5,11 @@ import traceback
 
 import pytz
 
-from logger_factory import LoggerFactory
+from infrastructure.logger_factory import LoggerFactory
+from infrastructure.exceptions import LateTimeException
 
 MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me
-REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
+REGEX_PATTERN = r"^(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 
 common_logger = LoggerFactory.create_logger("Notifu")
 
@@ -21,8 +22,7 @@ class Notifu:
         self.closest_ts = MAX_TIME
         self.__notifications = []
         self.__timezone = timezone
-        # TODO: fix issue when setdefault calls constructor
-        # self.__store()
+        self.__is_tz_default = True
 
     def _resort_array(self):
         self.__notifications.sort(key=lambda n: n.timestamp)
@@ -34,7 +34,7 @@ class Notifu:
         # TODO: check datetime validity (if notification is later than now)
         if notification.timestamp <= time.time():
             # TODO: Write specific exception
-            raise Exception()
+            raise LateTimeException("Too late")
         self.__notifications.append(notification)
         self._resort_array()
         return notification.datetime.strftime("%d.%m.%Y %H:%M UTC%z")
@@ -65,9 +65,13 @@ class Notifu:
     def get_timezone_str(self):
         return self.__timezone.zone
 
+    def is_tz_default(self):
+        return self.__is_tz_default
+
     def set_timezone(self, timezone):
         # TODO: return offset from UTC as +[-]XX
         self.__timezone = pytz.timezone(timezone)
+        self.__is_tz_default = False
         self.__store()
 
     def __store(self):
@@ -109,7 +113,7 @@ class Notification:
             # Throw something
             return None
         # TODO: handle cases with date/time overflow (e.g. 25:60)
-        date_str = match.group(2).strip()
+        date_str = match.group(1).strip()
         # TODO: remove hardcode to pick current year
         if len(date_str) == 0:
             date_ = datetime.today()
@@ -118,7 +122,7 @@ class Notification:
         else:
             date_ = datetime.strptime(date_str, "%d.%m.%Y")
 
-        time_ = datetime.strptime(match.group(3).strip(), "%H:%M")
-        text_str = match.group(4).strip()
+        time_ = datetime.strptime(match.group(2).strip(), "%H:%M")
+        text_str = match.group(3).strip()
         dt = datetime.combine(date_.date(), time_.time())
         return Notification(datetime=dt, text=text_str)
