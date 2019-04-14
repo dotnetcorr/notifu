@@ -41,9 +41,11 @@ class Notifu:
 
     def remove_notification(self, index):
         # remove by index in notifications array
-        del self.__notifications[index]
+        notification = self.__notifications.pop(index)
+        self.__store()
+        return notification
         # maybe there's no need to resort
-        self._resort_array()
+        # self._resort_array()
 
     def get_notifications(self, timestamp):
         # pop notifications behind timestamp, return them and update closest_ts

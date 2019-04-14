@@ -123,13 +123,23 @@ class Bot:
 
     def _list(self, notifu, message):
         notifications = notifu.get_all_notifications()
-        output_str = '\n'.join(["{0}. {1}".format(n+1, str(o)) for n, o in enumerate(notifications)])
-        self._send_message(notifu.chat_id, output_str)
+        if len(notifications) > 0:
+            reply_text = '\n'.join(["{0}. {1}".format(n+1, str(o)) for n, o in enumerate(notifications)])
+        else:
+            reply_text = strings.WARN_NO_NOTIFICATIONS
+        self._send_message(notifu.chat_id, reply_text)
 
     
     def _rm(self, notifu, message):
         # TODO: remove item with n-1 index (because for user it starts from 1)
-        pass
+        idx = int(message)
+        removed = notifu.remove_notification(idx-1)
+        if removed:
+            reply_text = strings.NOTIFICATION_REMOVED.format(removed)
+        else:
+            reply_text = strings.DEFAULT_ERROR
+        self._send_message(notifu.chat_id, reply_text)
+        
     
     def _edit(self, notifu, message):
         pass
