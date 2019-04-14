@@ -1,0 +1,2 @@
+class LateTimeException(Exception):
+    pass

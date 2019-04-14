@@ -1,19 +1,21 @@
 import os
-import requests
-import socks
 import time
 from datetime import datetime, timedelta
 import traceback
 
-from logger_factory import LoggerFactory
+import requests
+import socks
+
+from infrastructure.logger_factory import LoggerFactory
+from infrastructure.exceptions import LateTimeException
+from infrastructure import strings
 from notifu import Notifu, Notification
-import strings
+
 
 if bool(int(os.environ.get("NOTIFU_USE_PROXY", "0"))):
     PROXY_LIST = {"https":"socks5://127.0.0.1:9150"}
 else:
     PROXY_LIST = None
-REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 
 
 class Bot:
@@ -78,9 +80,13 @@ class Bot:
 
             if self.incoming:
                 for message in self.incoming:
+                    chat_id = message['chat']['id']
+                    if chat_id not in self.notifu.keys():
+                        self.notifu[chat_id] = Notifu(chat_id=chat_id)
                     command = message['text'].split()[0]
+                    message_text = ' '.join(message['text'].split()[1:])
                     if command in self.routes.keys():
-                        self.routes[command](message)
+                        self.routes[command](self.notifu[chat_id], message_text)
                 self.incoming = []
             else:
                 time.sleep(timeout)
@@ -95,45 +101,42 @@ class Bot:
             if not result.ok:
                 # TODO: handle errors
                 self.__logger.error(result.text)
-                # print("Can't send message")
         except:
             self.__logger.error(traceback.format_exc())
     
-    def _add_notification(self, message):
+    def _add_notification(self, notifu, message):
         # TODO: take care of this spaghetti code
-        print("Writing info about notification")
-        chat_id = message['chat']['id']
+        self.__logger.info("Writing info about notification")
         try:
-            notification = Notification.from_message(message['text'])
-            notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
+            notification = Notification.from_message(message)
             dt_str = notifu.add_notification(notification)
             reply_text = strings.SUCCESS_ADDED_NOTIFICATION.format(dt_str)
+        except LateTimeException:
+            self.__logger.error(traceback.format_exc())
+            reply_text = strings.ERR_OVERTIME
         except Exception:
             # TODO: catch different types of exception (no_dt_ex and dt_not_valid_ex)
+            self.__logger.error(traceback.format_exc())
             reply_text = strings.ERR_TRICKY
         finally:
-            self._send_message(chat_id, reply_text)
+            self._send_message(notifu.chat_id, reply_text)
 
-    def _list(self, message):
-        chat_id = message['chat']['id']
-        notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
+    def _list(self, notifu, message):
         notifications = notifu.get_all_notifications()
         output_str = '\n'.join(["{0}. {1}".format(n+1, str(o)) for n, o in enumerate(notifications)])
-        self._send_message(chat_id, output_str)
+        self._send_message(notifu.chat_id, output_str)
 
     
-    def _rm(self, message):
+    def _rm(self, notifu, message):
         # TODO: remove item with n-1 index (because for user it starts from 1)
         pass
     
-    def _edit(self, message):
+    def _edit(self, notifu, message):
         pass
 
-    def _set_time_zone(self, message):
-        chat_id = message['chat']['id']
-        tz_str = message['text'].split(' ')[-1]
+    def _set_time_zone(self, notifu, message):
+        tz_str = message
         # TODO: handle possible errors from timezone parsing
-        notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
         try:
             notifu.set_timezone(tz_str)
             reply_text = strings.SUCCESS_SET_TZ.format(notifu.get_timezone_str())
@@ -141,23 +144,19 @@ class Bot:
         except Exception: 
             reply_text = strings.ERR_SET_TZ
         finally:
-            self._send_message(chat_id, reply_text)
+            self._send_message(notifu.chat_id, reply_text)
 
-    def _start(self, message):
-        chat_id = message['chat']['id']
+    def _start(self, notifu, message):
         dt = datetime.today() + timedelta(seconds=120)
         dt_str = dt.strftime("%d.%m %H:%M")
         reply_text = strings.START_MESSAGE.format(dt_str) 
-        self._send_message(chat_id, reply_text)
-        if chat_id not in self.notifu.keys():
-            self.notifu[chat_id] = Notifu(chat_id=chat_id)
-            self._notify_default_tz(chat_id)
+        self._send_message(notifu.chat_id, reply_text)
+        # TODO: find more clever way to warn user about default timezone
+        # self._notify_default_tz(chat_id)
     
-    def _help(self, message):
-        chat_id = message['chat']['id']
-        notifu = self.notifu.setdefault(chat_id, Notifu(chat_id=chat_id))
+    def _help(self, notifu, message):
         reply_text = strings.HELP_MESSAGE.format(notifu.get_timezone_str())
-        self._send_message(chat_id, reply_text)
+        self._send_message(notifu.chat_id, reply_text)
 
     def _notify_default_tz(self, chat_id):
         self._send_message(chat_id, strings.TZ_SUGGEST)

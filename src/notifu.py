@@ -5,10 +5,11 @@ import traceback
 
 import pytz
 
-from logger_factory import LoggerFactory
+from infrastructure.logger_factory import LoggerFactory
+from infrastructure.exceptions import LateTimeException
 
 MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me
-REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
+REGEX_PATTERN = r"^(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
 
 common_logger = LoggerFactory.create_logger("Notifu")
 
@@ -34,7 +35,7 @@ class Notifu:
         # TODO: check datetime validity (if notification is later than now)
         if notification.timestamp <= time.time():
             # TODO: Write specific exception
-            raise Exception()
+            raise LateTimeException("Too late")
         self.__notifications.append(notification)
         self._resort_array()
         return notification.datetime.strftime("%d.%m.%Y %H:%M UTC%z")
@@ -109,7 +110,7 @@ class Notification:
             # Throw something
             return None
         # TODO: handle cases with date/time overflow (e.g. 25:60)
-        date_str = match.group(2).strip()
+        date_str = match.group(1).strip()
         # TODO: remove hardcode to pick current year
         if len(date_str) == 0:
             date_ = datetime.today()
@@ -118,7 +119,7 @@ class Notification:
         else:
             date_ = datetime.strptime(date_str, "%d.%m.%Y")
 
-        time_ = datetime.strptime(match.group(3).strip(), "%H:%M")
-        text_str = match.group(4).strip()
+        time_ = datetime.strptime(match.group(2).strip(), "%H:%M")
+        text_str = match.group(3).strip()
         dt = datetime.combine(date_.date(), time_.time())
         return Notification(datetime=dt, text=text_str)
