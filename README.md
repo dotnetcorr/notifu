@@ -6,13 +6,14 @@ Telegram bot for notifications (ex-planned-part of Task-Fu)
 - [x] Show list of all notifications
 - [x] Store notification data for restoring after restart
 - [ ] Handle errors correctly, write to log
+- [ ] Make start and help commands more useful
 - [ ] (optional) Handle dictionary keys without setdefault (due to redundant constructor calls)
 - [ ] Show timezones in every notification
 - [x] Implement help command handling
 - [ ] Implement notification removing logic
 - [ ] (optional) Use buttons to manipulate timezones
 - [ ] Handle periodic notifications
-- [ ] Add more items in this list
+- [ ] Add more items to this list
 
 
 ## Notes
