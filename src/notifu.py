@@ -1,11 +1,16 @@
 from datetime import datetime
 import pickle
 import time
+import traceback
 
 import pytz
 
+from logger_factory import LoggerFactory
+
 MAX_TIME = datetime(3000,12,31).timestamp() #   donkey or emir or me
 REGEX_PATTERN = r"^/(notifu|list|rm|edit|settz)\s(\d{2}[.]\d{2}[.]\d{4}\s|\d{2}[.]\d{2}\s|)(\d{2}[:]\d{2}\s|\d{4}\s)(.+$)"
+
+common_logger = LoggerFactory.create_logger("Notifu")
 
 class Notifu:
     """
@@ -65,8 +70,12 @@ class Notifu:
         self.__store()
 
     def __store(self):
-        with open("storage/{0}.pkl".format(self.chat_id), 'wb') as f_out:
-            pickle.dump(self, f_out)
+        try:
+            with open("storage/{0}.pkl".format(self.chat_id), 'wb') as f_out:
+                pickle.dump(self, f_out)
+        except Exception:
+            common_logger.error(traceback.format_exc())
+            raise
     
     @staticmethod
     def from_pickle(filename):

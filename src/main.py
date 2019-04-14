@@ -3,6 +3,7 @@ import requests
 import socks
 import time
 from datetime import datetime, timedelta
+import traceback
 
 from logger_factory import LoggerFactory
 from notifu import Notifu, Notification
@@ -46,18 +47,21 @@ class Bot:
         if self.update_id:
             params['offset'] = self.update_id + 1
 
-        # self.__logger.info("Trying get incoming messages")
-        r = requests.post("https://api.telegram.org/bot%s/getUpdates" % self.token, params=params, timeout=10, proxies=PROXY_LIST)
-        if r.ok:
-            response = r.json()
+        try:
+            # self.__logger.info("Trying get incoming messages")
+            r = requests.post("https://api.telegram.org/bot%s/getUpdates" % self.token, params=params, timeout=10, proxies=PROXY_LIST)
+            if r.ok:
+                response = r.json()
 
-            if response['result']:
-                for item in response['result']:
-                    self.update_id = item['update_id']
-                    if 'message' in item:
-                        self.incoming.append(item['message'])
-                    elif 'edited_message' in item:
-                        self.incoming.append(item['edited_message'])
+                if response['result']:
+                    for item in response['result']:
+                        self.update_id = item['update_id']
+                        if 'message' in item:
+                            self.incoming.append(item['message'])
+                        elif 'edited_message' in item:
+                            self.incoming.append(item['edited_message'])
+        except:
+            self.__logger.error(traceback.format_exc())
     
     def _handle_notifications(self):
         for chat_id, notifu_item in self.notifu.items():
@@ -86,10 +90,14 @@ class Bot:
             "chat_id": chat_id,
             "text": message
         }
-        result = requests.post("https://api.telegram.org/bot%s/sendMessage" % self.token, params=payload, timeout=10, proxies=PROXY_LIST)
-        if not result.ok:
-            # TODO: handle errors
-            print("Can't send message")
+        try:
+            result = requests.post("https://api.telegram.org/bot%s/sendMessage" % self.token, params=payload, timeout=10, proxies=PROXY_LIST)
+            if not result.ok:
+                # TODO: handle errors
+                self.__logger.error(result.text)
+                # print("Can't send message")
+        except:
+            self.__logger.error(traceback.format_exc())
     
     def _add_notification(self, message):
         # TODO: take care of this spaghetti code
