@@ -151,15 +151,16 @@ class Bot:
         dt_str = dt.strftime("%d.%m %H:%M")
         reply_text = strings.START_MESSAGE.format(dt_str) 
         self._send_message(notifu.chat_id, reply_text)
-        # TODO: find more clever way to warn user about default timezone
-        # self._notify_default_tz(chat_id)
+        if notifu.is_tz_default():
+            # TODO: find more clever way to warn user about default timezone
+            self._warn_default_tz(notifu.chat_id)
     
     def _help(self, notifu, message):
         reply_text = strings.HELP_MESSAGE.format(notifu.get_timezone_str())
         self._send_message(notifu.chat_id, reply_text)
 
-    def _notify_default_tz(self, chat_id):
-        self._send_message(chat_id, strings.TZ_SUGGEST)
+    def _warn_default_tz(self, chat_id):
+        self._send_message(chat_id, strings.DEFAULT_TZ_WARN)
 
 
 if __name__ == "__main__":

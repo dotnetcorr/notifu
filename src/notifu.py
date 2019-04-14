@@ -22,8 +22,7 @@ class Notifu:
         self.closest_ts = MAX_TIME
         self.__notifications = []
         self.__timezone = timezone
-        # TODO: fix issue when setdefault calls constructor
-        # self.__store()
+        self.__is_tz_default = True
 
     def _resort_array(self):
         self.__notifications.sort(key=lambda n: n.timestamp)
@@ -66,9 +65,13 @@ class Notifu:
     def get_timezone_str(self):
         return self.__timezone.zone
 
+    def is_tz_default(self):
+        return self.__is_tz_default
+
     def set_timezone(self, timezone):
         # TODO: return offset from UTC as +[-]XX
         self.__timezone = pytz.timezone(timezone)
+        self.__is_tz_default = False
         self.__store()
 
     def __store(self):

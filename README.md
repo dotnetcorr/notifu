@@ -19,7 +19,6 @@ Telegram bot for notifications (ex-planned-part of Task-Fu)
 
 ## Notes
 - Simple persistence implemented with pickles. Cases when notifu will be stored:
-    * Creating a new notifu object
     * Changing a timezone
     * Adding a new notification
     * Removing notification
