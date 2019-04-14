@@ -21,7 +21,8 @@ class Notifu:
         self.closest_ts = MAX_TIME
         self.__notifications = []
         self.__timezone = timezone
-        self.__store()
+        # TODO: fix issue when setdefault calls constructor
+        # self.__store()
 
     def _resort_array(self):
         self.__notifications.sort(key=lambda n: n.timestamp)
