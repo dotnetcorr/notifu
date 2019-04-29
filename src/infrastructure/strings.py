@@ -25,6 +25,8 @@ DEFAULT_ERROR = u"Упс... Что-то пошло не так..."
 
 SUCCESS_SET_TZ = u"Таймзона {0} успешно установлена."
 
-SUCCESS_ADDED_NOTIFICATION = u"Напоминание успешно создано на {0}"
+SUCCESS_ADDED_NOTIFICATION = u"Напоминание успешно создано на `{0}`"
 
 NOTIFICATION_REMOVED = u"Напоминание \"{0}\" успешно удалено."
+
+NOTIFICATION_LINE = u"*{0}. {1}*\n`{2}`"

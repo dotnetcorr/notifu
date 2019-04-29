@@ -100,7 +100,10 @@ class Notification:
         self.timestamp = self.datetime.timestamp()
     
     def __str__(self):
-        return self.datetime.strftime("%d.%m.%Y %H:%M UTC%z") + ' ' + self.text
+        return "{1} `{0}`".format(self.datetime.strftime("%d.%m.%Y %H:%M UTC%z"), self.text)
+    
+    def get_formatted_datetime(self):
+        return self.datetime.strftime("%d.%m.%Y %H:%M UTC%z")
 
     @staticmethod
     def from_message(text):

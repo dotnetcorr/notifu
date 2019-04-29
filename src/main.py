@@ -95,7 +95,8 @@ class Bot:
     def _send_message(self, chat_id, message):
         payload = {
             "chat_id": chat_id,
-            "text": message
+            "text": message,
+            "parse_mode": "markdown"
         }
         try:
             result = requests.post("https://api.telegram.org/bot%s/sendMessage" % self.token, params=payload, timeout=10, proxies=PROXY_LIST)
@@ -125,7 +126,9 @@ class Bot:
     def _list(self, notifu, message):
         notifications = notifu.get_all_notifications()
         if len(notifications) > 0:
-            reply_text = '\n'.join(["{0}. {1}".format(n+1, str(o)) for n, o in enumerate(notifications)])
+            # reply_text = '\n'.join(["{0}. {1}".format(n+1, str(o)) for n, o in enumerate(notifications)])
+            reply_text = '\n'.join([strings.NOTIFICATION_LINE.format(n+1, l.get_formatted_datetime(), l.text) 
+                                    for n, l in enumerate(notifications)])
         else:
             reply_text = strings.WARN_NO_NOTIFICATIONS
         self._send_message(notifu.chat_id, reply_text)
